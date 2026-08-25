@@ -9,22 +9,35 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
-    const newSocket = io(socketUrl, {
-      transports: ['websocket', 'polling'],
-    });
+    let newSocket;
+    try {
+      newSocket = io(socketUrl, {
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5,
+        reconnectionDelay: 3000,
+        timeout: 10000,
+        autoConnect: true,
+      });
 
-    newSocket.on('connect', () => {
-      setConnected(true);
-    });
+      newSocket.on('connect', () => {
+        setConnected(true);
+      });
 
-    newSocket.on('disconnect', () => {
-      setConnected(false);
-    });
+      newSocket.on('disconnect', () => {
+        setConnected(false);
+      });
 
-    setSocket(newSocket);
+      newSocket.on('connect_error', () => {
+        setConnected(false);
+      });
+
+      setSocket(newSocket);
+    } catch (err) {
+      console.warn('Socket connection deferred:', err);
+    }
 
     return () => {
-      newSocket.close();
+      if (newSocket) newSocket.close();
     };
   }, []);
 
