@@ -1,0 +1,128 @@
+import React, { useState } from 'react';
+import { X, Printer, Download, Share2, FileText } from 'lucide-react';
+import PrintableBill from './PrintableBill';
+import toast from 'react-hot-toast';
+
+export const BillPreviewModal = ({ isOpen, onClose, bill, settings }) => {
+  const [printFormat, setPrintFormat] = useState('80mm'); // '80mm' | 'a4'
+
+  if (!isOpen || !bill) return null;
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = () => {
+    window.open(`/api/bills/${bill._id}/pdf`, '_blank');
+  };
+
+  const handleWhatsAppShare = () => {
+    const mobile = bill.customer?.mobile?.replace(/\D/g, '');
+    if (!mobile) {
+      toast.error('Customer mobile number is missing');
+      return;
+    }
+
+    const formattedMobile = mobile.length === 10 ? `91${mobile}` : mobile;
+    const text = encodeURIComponent(
+      `Hello ${bill.customer?.name || 'Customer'},\n\nThank you for choosing *NAGULAN Unisex Salon*! ✨\n\n*Invoice No:* #${bill.billNumber}\n*Date:* ${new Date(
+        bill.billDate
+      ).toLocaleDateString('en-IN')}\n*Total Amount:* ₹${bill.grandTotal}\n*Payment Method:* ${
+        bill.paymentMethod
+      }\n*Status:* ${bill.paymentStatus}\n\nFranchise Enquiry: 97899 61617\nVisit Again!`
+    );
+
+    window.open(`https://wa.me/${formattedMobile}?text=${text}`, '_blank');
+    toast.success('Opening WhatsApp with bill summary!');
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+      <div className="bg-white dark:bg-charcoal-900 w-full max-w-4xl rounded-2xl shadow-2xl border border-gray-200 dark:border-charcoal-800 flex flex-col max-h-[92vh] overflow-hidden animate-in fade-in zoom-in duration-150">
+        {/* Header Bar */}
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-charcoal-800 flex items-center justify-between bg-gray-50 dark:bg-charcoal-950/60 no-print">
+          <div>
+            <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+              <FileText className="w-5 h-5 text-gold-500" />
+              Invoice Preview: #{bill.billNumber}
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Customer: {bill.customer?.name} ({bill.customer?.mobile})
+            </p>
+          </div>
+
+          {/* Format Switcher */}
+          <div className="flex items-center gap-2">
+            <div className="bg-gray-200 dark:bg-charcoal-800 p-0.5 rounded-lg flex text-xs">
+              <button
+                onClick={() => setPrintFormat('80mm')}
+                className={`px-3 py-1 rounded-md font-semibold transition-all ${
+                  printFormat === '80mm'
+                    ? 'bg-black text-white dark:bg-gold-500 dark:text-black shadow'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                80mm Thermal
+              </button>
+              <button
+                onClick={() => setPrintFormat('a4')}
+                className={`px-3 py-1 rounded-md font-semibold transition-all ${
+                  printFormat === 'a4'
+                    ? 'bg-black text-white dark:bg-gold-500 dark:text-black shadow'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white'
+                }`}
+              >
+                A4 Invoice
+              </button>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-charcoal-800"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Scrollable Printable Bill Body */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gray-100 dark:bg-charcoal-950/40">
+          <div className="flex justify-center">
+            <PrintableBill bill={bill} settings={settings} format={printFormat} />
+          </div>
+        </div>
+
+        {/* Action Footer */}
+        <div className="px-6 py-4 border-t border-gray-200 dark:border-charcoal-800 bg-white dark:bg-charcoal-900 flex flex-wrap items-center justify-between gap-3 no-print">
+          <button
+            onClick={handleWhatsAppShare}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium text-xs sm:text-sm shadow transition-all"
+          >
+            <Share2 className="w-4 h-4" />
+            <span>Share on WhatsApp</span>
+          </button>
+
+          <div className="flex items-center gap-2 sm:gap-3">
+            <button
+              onClick={handleDownloadPDF}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-charcoal-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-charcoal-800 font-medium text-xs sm:text-sm transition-all"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download PDF</span>
+            </button>
+
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-5 py-2 rounded-lg bg-black text-white dark:bg-gold-500 dark:text-black hover:bg-charcoal-800 dark:hover:bg-gold-400 font-bold text-xs sm:text-sm shadow-md transition-all"
+            >
+              <Printer className="w-4 h-4" />
+              <span>Print {printFormat === '80mm' ? 'Thermal Receipt' : 'A4 Bill'}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default BillPreviewModal;
